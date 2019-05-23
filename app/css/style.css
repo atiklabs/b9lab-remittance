@@ -1,0 +1,47 @@
+h1 {
+    padding: 20px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+h2 {
+    font-size: 32px;
+}
+
+input {
+    width: 100%;
+}
+
+#Actions {
+    padding: 30px 0;
+    margin-bottom: 50px;
+    border-bottom: 1px solid #ddd;
+}
+
+.row {
+    margin-bottom: 30px;
+}
+
+/*
+ * Message box
+ */
+
+#MessageBox {
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    z-index: 99;
+}
+
+#MessageBox .message-success {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 3px;
+    background: #d7ffc7;
+}
+
+#MessageBox .message-error {
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 3px;
+    background: #ff9ba0;
+}

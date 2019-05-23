@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>remittanceContract</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/skeleton.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="//fonts.googleapis.com/css?family=Roboto:400,300,600" rel="stylesheet" type="text/css">
+    <script src="js/remittance.js"></script>
+</head>
+<body>
+<div id="MessageBox" class="message-box"></div>
+<div id="Container" class="container" style="margin: 30px auto">
+    <section id="Title">
+        <h1>remittanceContract</h1>
+    </section>
+    <section id="Actions">
+        <div class="row">
+            <div class="six columns">
+                <h2>Add new transaction</h2>
+                <label for="NewTransactionExchanger">Exchanger:</label><input id="NewTransactionExchanger" type="text" value="0xd3fd7ad0b6dbde55df4f4d5135563f89ef8c79b2" />
+                <label for="NewTransactionPassword1">Password 1:</label><input id="NewTransactionPassword1" type="text" value="orange" />
+                <label for="NewTransactionPassword2">Password 2:</label><input id="NewTransactionPassword2" type="text" value="apple" />
+                <label for="NewTransactionExpirationDays">Expiration days:</label><input id="NewTransactionExpirationDays" type="number" value="10" />
+                <label for="NewTransactionAmount">Ether:</label><input id="NewTransactionAmount" type="text" value="1" />
+                <button onclick="remittance.newTransaction()">Send</button>
+            </div>
+            <div class="six columns">
+                <h2>Withdraw transaction</h2>
+                <label for="WithdrawTransactionId">Transaction ID:</label><input id="WithdrawTransactionId" type="number" value="" />
+                <label for="WithdrawPassword1">Password 1:</label><input id="WithdrawPassword1" type="text" value="orange" />
+                <label for="WithdrawPassword2">Password 2:</label><input id="WithdrawPassword2" type="text" value="apple" />
+                <button onclick="remittance.withdraw()">Send</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="six columns">
+                <h2>Withdraw expired transaction</h2>
+                <label for="ExpiredTransactionId">Expired transaction ID:</label><input id="ExpiredTransactionId" type="number" value="" />
+                <button onclick="remittance.withdrawExpired()">Withdraw</button>
+            </div>
+            <div class="six columns">
+                <h2>Owner? Withdraw benefits</h2>
+                <p><strong>Benefits available: </strong><span id="BenefitsAvailable">0</span></p>
+                <button onclick="remittance.withdrawBenefits()">Withdraw</button>
+            </div>
+        </div>
+    </section>
+    <section id="Transactions">
+        <h2>Transactions</h2>
+        <div class="twelve columns">
+            <table id="TransactionsTable" class="u-full-width table-2-columns">
+                <thead>
+                <tr>
+                    <td>Id</td>
+                    <td>Sender</td>
+                    <td>Exchanger</td>
+                    <td>Amount</td>
+                    <td>ExpirationTime</td>
+                </tr>
+                </thead>
+                <tbody id="TransactionsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+</body>
+</html>
