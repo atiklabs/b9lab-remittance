@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/atik-lab/b9lab-remittance.svg?branch=develop)](https://travis-ci.org/atik-lab/b9lab-remittance)
+
 # b9lab Remittance
 
 This is the second project of the Community Blockstars 2019 - Ethereum Developer Course.
