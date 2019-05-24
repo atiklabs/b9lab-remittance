@@ -19,7 +19,7 @@ contract('Remittance', accounts => {
 
     beforeEach("deploy and prepare", async function() {
 
-        instance = await Remittance.new({from: owner});
+        instance = await Remittance.new(false, {from: owner});
         hash = await instance.hashPasswords(password1, password2);
         feeBN = await instance.fee.call();
         minimumAmountForApplyingFeeBN = await instance.minimumAmountForApplyingFee.call();
@@ -280,6 +280,22 @@ contract('Remittance', accounts => {
             });
         });
 
+        it("should not let once the contract killSwitch has been activated", async function() {
+
+            let txObj = await instance.kill({from: owner});
+            assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
+            await expectedExceptionPromise(function() {
+                return instance.newTransaction(carol, hash, 5, {from: alice, value: quantity});
+            });
+        });
+
+        it("should not let any other than owner to kill the contract", async function() {
+
+            return await expectedExceptionPromise(function() {
+                return instance.kill({from: alice});
+            });
+        });
+
         it("should not let send ETH while paused", async function() {
 
             let txObj = await instance.pause({from: owner});
@@ -292,6 +308,14 @@ contract('Remittance', accounts => {
             });
             isPaused = await instance.isPaused();
             assert.strictEqual(isPaused, true, "Contract should not be paused");
+        });
+
+        it("should not let send ETH if starting paused", async function() {
+
+            let instance2 = await Remittance.new(true, {from: owner});
+            await expectedExceptionPromise(function() {
+                return instance2.newTransaction(carol, hash, 5, {from: alice, value: quantity});
+            });
         });
     });
 });

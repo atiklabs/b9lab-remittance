@@ -17,6 +17,8 @@ contract Remittance is Pausable {
     mapping(uint => Transaction) public transactions;
     uint private lastTransaction;
 
+    bool private _killSwitch = false;
+
     uint constant public maxExpirationDays = 10;
     uint constant public fee = 0.01 ether;
     uint constant public minimumAmountForApplyingFee = 0.1 ether;
@@ -26,6 +28,7 @@ contract Remittance is Pausable {
     event LogWithdraw(uint indexed transactionId, address indexed sender, address indexed exchanger, uint amount, uint collectedFee);
     event LogWithdrawExpired(uint indexed transactionId, address indexed sender, address indexed exchanger, uint amount);
     event LogWithdrawBenefits(uint indexed amount);
+    event LogKilled();
 
     modifier onlyBeforeExpirationTime(uint transactionId) {
         require(now <= transactions[transactionId].expirationTime, "Transaction has been expired");
@@ -36,6 +39,16 @@ contract Remittance is Pausable {
         require(now > transactions[transactionId].expirationTime, "Transaction has not been expired yet");
         _;
     }
+
+    modifier onlyAlive() {
+        require(_killSwitch == false, "The contract is dead");
+        _;
+    }
+
+    /**
+     * Constructor
+     */
+    constructor (bool paused) Pausable(paused) public {}
 
     /**
      * Avoid sending money directly to the contract
@@ -58,7 +71,7 @@ contract Remittance is Pausable {
      * In order for a 3rd party to withdraw the money, that party will need to give the two keys that
      * generate the hash.
      */
-    function newTransaction(address _exchanger, bytes32 _hash, uint _numberOfDays) external payable whenNotPaused {
+    function newTransaction(address _exchanger, bytes32 _hash, uint _numberOfDays) external payable whenNotPaused onlyAlive {
         require(_hash != bytes32(0), "Do not burn your eth");
         require(_exchanger != address(0), "Exchanger address is malformed");
         require(msg.value > 0, "You must send something to create a new transaction");
@@ -80,7 +93,7 @@ contract Remittance is Pausable {
     /**
      * Withdraw transaction
      */
-    function withdraw(uint _transactionId, string memory _password1, string memory _password2) public whenNotPaused onlyBeforeExpirationTime(_transactionId) {
+    function withdraw(uint _transactionId, string memory _password1, string memory _password2) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_transactionId) {
         Transaction storage transaction = transactions[_transactionId];
         require(transaction.exchanger == msg.sender, "Only the exchanger can withdraw");
         require(transaction.amount > 0, "Nothing to withdraw");
@@ -102,7 +115,7 @@ contract Remittance is Pausable {
     /**
      * Withdraw expired transaction
      */
-    function withdrawExpired(uint _transactionId) public whenNotPaused onlyAfterExpirationTime(_transactionId) {
+    function withdrawExpired(uint _transactionId) public whenNotPaused onlyAfterExpirationTime(_transactionId) onlyAlive {
         Transaction storage transaction = transactions[_transactionId];
         require(transaction.sender == msg.sender, "Only the exchanger can withdraw");
         require(transaction.amount > 0, "Nothing to withdraw");
@@ -115,9 +128,18 @@ contract Remittance is Pausable {
     /**
      * Withdrawing benefits produced by the contract.
      */
-    function withdrawBenefits() public onlyOwner {
+    function withdrawBenefits() public onlyOwner onlyAlive {
         uint benefits = benefitsToWithdraw;
         emit LogWithdrawBenefits(benefits);
+        benefitsToWithdraw = 0;
         msg.sender.transfer(benefits);
+    }
+
+    /**
+     * Is this function is called the program won't run again
+     */
+    function kill() public onlyOwner {
+        _killSwitch = true;
+        emit LogKilled();
     }
 }
