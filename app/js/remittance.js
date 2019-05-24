@@ -49,12 +49,11 @@ module.exports = {
 
     newTransaction: function() {
         let exchanger = document.getElementById("NewTransactionExchanger").value;
-        let password1 = document.getElementById("NewTransactionPassword1").value;
-        let password2 = document.getElementById("NewTransactionPassword2").value;
+        let password = document.getElementById("NewTransactionPassword").value;
         let expirationDays = document.getElementById("NewTransactionExpirationDays").value;
         let amount = document.getElementById("NewTransactionAmount").value;
 
-        remittanceContract.methods.hashPasswords(password1, password2).call()
+        remittanceContract.methods.hashPasswords(password).call()
             .then(hash => {
                 messageSuccess("Passwords hash is " + hash);
                 remittanceContract.methods.newTransaction(exchanger, hash, expirationDays).send({from: defaultAccount, value: web3.utils.toWei(amount, "ether")})
@@ -71,11 +70,10 @@ module.exports = {
     },
 
     withdraw: function() {
-        let transactionId = document.getElementById("WithdrawTransactionId").value;
-        let password1 = document.getElementById("WithdrawPassword1").value;
-        let password2 = document.getElementById("WithdrawPassword2").value;
+        let transactionHash = document.getElementById("WithdrawTransactionHash").value;
+        let password = document.getElementById("WithdrawPassword").value;
 
-        remittanceContract.methods.withdraw(transactionId, password1, password2).send({from: defaultAccount})
+        remittanceContract.methods.withdraw(transactionHash, password).send({from: defaultAccount})
             .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
@@ -88,9 +86,9 @@ module.exports = {
     },
 
     withdrawExpired: function() {
-        let transactionId = document.getElementById("ExpiredTransactionId").value;
+        let transactionHash = document.getElementById("ExpiredTransactionHash").value;
 
-        remittanceContract.methods.withdrawExpired(transactionId).send({from: defaultAccount})
+        remittanceContract.methods.withdrawExpired(transactionHash).send({from: defaultAccount})
             .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
@@ -139,22 +137,21 @@ module.exports = {
     parseEvent: function(event) {
         switch (event.event) {
             case 'LogNewTransaction':
-                let transactionId = event.returnValues['transactionId'];
+                let hash = event.returnValues['hash'];
                 let sender = event.returnValues['sender'];
                 let exchanger = event.returnValues['exchanger'];
                 let amount = web3.utils.toBN(event.returnValues['amount'].toString()); // BN !== BigNumber
                 let expirationDate = event.returnValues['expirationDate'];
-                remittance.addTransactionInTable(transactionId, sender, exchanger, amount, expirationDate);
+                remittance.addTransactionInTable(hash, sender, exchanger, amount, expirationDate);
                 break;
             case 'LogWithdraw':
-                let transactionId2 = event.returnValues['transactionId'];
-                let collectedFee = web3.utils.toBN(event.returnValues['collectedFee'].toString()); // BN !== BigNumber
-                remittance.setTransactionAmountToZero(transactionId2);
-                remittance.updateAvailableBenefits(collectedFee);
+                let transactionHash2 = event.returnValues['hash'];
+                remittance.setTransactionAmountToZero(transactionHash2);
+                remittance.updateAvailableBenefits(web3.utils.toBN(web3.utils.toWei("0.01")));
                 break;
             case 'LogWithdrawExpired':
-                let transactionId3 = event.returnValues['transactionId'];
-                remittance.setTransactionAmountToZero(transactionId3);
+                let transactionHash3 = event.returnValues['hash'];
+                remittance.setTransactionAmountToZero(transactionHash3);
                 break;
             case 'LogWithdrawBenefits':
                 let benefits = web3.utils.toBN(event.returnValues['amount'].toString()); // BN !== BigNumber
@@ -165,14 +162,14 @@ module.exports = {
         }
     },
 
-    addTransactionInTable: function(id, sender, exchanger, amount, expirationTime) {
+    addTransactionInTable: function(hash, sender, exchanger, amount, expirationTime) {
         let amountEther = web3.utils.fromWei(amount);
         let expirationTimeHuman = new Date(expirationTime*1000).toISOString();
-        document.getElementById("TransactionsTableBody").innerHTML += '<tr id="TransactionRow' + id + '"><td>' + id + '</td><td>' + sender + '</td><td>' + exchanger + '</td><td id="TransactionsAmount' + id + '">' + amountEther + '</td><td>' + expirationTimeHuman + '</tr>';
+        document.getElementById("TransactionsTableBody").innerHTML += '<tr id="TransactionRow' + hash + '"><td>' + hash + '</td><td>' + sender + '</td><td>' + exchanger + '</td><td id="TransactionsAmount' + hash + '">' + amountEther + '</td><td>' + expirationTimeHuman + '</tr>';
     },
 
-    setTransactionAmountToZero: function(id) {
-        document.getElementById("TransactionsAmount" + id).innerHTML = '0';
+    setTransactionAmountToZero: function(hash) {
+        document.getElementById("TransactionsAmount" + hash).innerHTML = '0';
     },
 
     // Change contract balance UI

@@ -10,12 +10,10 @@ contract Remittance is Pausable {
         address sender;  // Keeping this to easy up the notification process to "Alice"
         address exchanger;
         uint amount;
-        bytes32 hash;  // The operation salt+password1 must calculate this hash to for exchanger to unlock the amount
         uint expirationTime;
     }
 
-    mapping(uint => Transaction) public transactions;
-    uint private lastTransaction;
+    mapping(bytes32 => Transaction) public transactions;
 
     bool private _killSwitch = false;
 
@@ -24,19 +22,19 @@ contract Remittance is Pausable {
     uint constant public minimumAmountForApplyingFee = 0.1 ether;
     uint public benefitsToWithdraw;
 
-    event LogNewTransaction(uint indexed transactionId, address indexed sender, address indexed exchanger, uint amount, bytes32 hash, uint expirationDate);
-    event LogWithdraw(uint indexed transactionId, address indexed sender, address indexed exchanger, uint amount, uint collectedFee);
-    event LogWithdrawExpired(uint indexed transactionId, address indexed sender, address indexed exchanger, uint amount);
+    event LogNewTransaction(bytes32 indexed hash, address indexed sender, address indexed exchanger, uint amount, uint expirationDate);
+    event LogWithdraw(bytes32 indexed hash, address indexed sender, address indexed exchanger, uint amount);
+    event LogWithdrawExpired(bytes32 indexed hash, address indexed sender, address indexed exchanger, uint amount);
     event LogWithdrawBenefits(uint indexed amount);
     event LogKilled();
 
-    modifier onlyBeforeExpirationTime(uint transactionId) {
-        require(now <= transactions[transactionId].expirationTime, "Transaction has been expired");
+    modifier onlyBeforeExpirationTime(bytes32 _hash) {
+        require(now <= transactions[_hash].expirationTime, "Transaction has been expired");
         _;
     }
 
-    modifier onlyAfterExpirationTime(uint transactionId) {
-        require(now > transactions[transactionId].expirationTime, "Transaction has not been expired yet");
+    modifier onlyAfterExpirationTime(bytes32 _hash) {
+        require(now > transactions[_hash].expirationTime, "Transaction has not been expired yet");
         _;
     }
 
@@ -76,51 +74,47 @@ contract Remittance is Pausable {
         require(msg.value > 0, "You must send something to create a new transaction");
         require(_numberOfDays > 0, "You must set a number of days for the expiration of the transaction");
         require(_numberOfDays <= maxExpirationDays, "Cannot set more than maxExpirationDays");
-        uint transactionId = lastTransaction;
+        require(transactions[_hash].expirationTime == 0, "This password has been already used in this contract");
         uint expiration = now + _numberOfDays * 1 days;
-        transactions[lastTransaction] = Transaction({
+        transactions[_hash] = Transaction({
             sender: msg.sender,
             exchanger: _exchanger,
             amount: msg.value,
-            hash: _hash,
             expirationTime: expiration
         });
-        lastTransaction = lastTransaction + 1;
-        emit LogNewTransaction(transactionId, msg.sender, _exchanger, msg.value, _hash, expiration);
+        emit LogNewTransaction(_hash, msg.sender, _exchanger, msg.value, expiration);
     }
 
     /**
      * Withdraw transaction
      */
-    function withdraw(uint _transactionId, string memory _password) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_transactionId) {
-        Transaction storage transaction = transactions[_transactionId];
+    function withdraw(bytes32 _hash, string memory _password) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_hash) {
+        Transaction storage transaction = transactions[_hash];
         require(transaction.exchanger == msg.sender, "Only the exchanger can withdraw");
         require(transaction.amount > 0, "Nothing to withdraw");
         bytes32 hash = keccak256(abi.encodePacked(address(this), _password));
-        require(transaction.hash == hash, "You did not provide the correct passwords");
+        require(hash == _hash, "You did not provide the correct passwords");
         // We collect fee only when the transaction is real and completed
         uint netAmount = transaction.amount;
-        uint collectedFee = 0;
         if (netAmount >= minimumAmountForApplyingFee) {
             netAmount = netAmount - fee;
             benefitsToWithdraw = benefitsToWithdraw + fee;
-            collectedFee = fee;
         }
         transaction.amount = 0;
-        emit LogWithdraw(_transactionId, transaction.sender, transaction.exchanger, netAmount, collectedFee);
+        emit LogWithdraw(_hash, transaction.sender, transaction.exchanger, netAmount);
         msg.sender.transfer(netAmount);
     }
 
     /**
      * Withdraw expired transaction
      */
-    function withdrawExpired(uint _transactionId) public whenNotPaused onlyAfterExpirationTime(_transactionId) onlyAlive {
-        Transaction storage transaction = transactions[_transactionId];
+    function withdrawExpired(bytes32 _hash) public whenNotPaused onlyAfterExpirationTime(_hash) onlyAlive {
+        Transaction storage transaction = transactions[_hash];
         require(transaction.sender == msg.sender, "Only the exchanger can withdraw");
         require(transaction.amount > 0, "Nothing to withdraw");
         uint toWithdraw = transaction.amount;
         transaction.amount = 0;
-        emit LogWithdrawExpired(_transactionId, transaction.sender, transaction.exchanger, toWithdraw);
+        emit LogWithdrawExpired(_hash, transaction.sender, transaction.exchanger, toWithdraw);
         msg.sender.transfer(toWithdraw);
     }
 
@@ -129,6 +123,7 @@ contract Remittance is Pausable {
      */
     function withdrawBenefits() public onlyOwner onlyAlive {
         uint benefits = benefitsToWithdraw;
+        require(benefits > 0, "There are no fees to withdraw");
         emit LogWithdrawBenefits(benefits);
         benefitsToWithdraw = 0;
         msg.sender.transfer(benefits);
