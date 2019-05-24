@@ -10,7 +10,7 @@ contract Remittance is Pausable {
         address sender;  // Keeping this to easy up the notification process to "Alice"
         address exchanger;
         uint amount;
-        bytes32 hash;  // The operation password1+password2 must calculate this hash to for exchanger to unlock the amount
+        bytes32 hash;  // The operation salt+password1 must calculate this hash to for exchanger to unlock the amount
         uint expirationTime;
     }
 
@@ -60,10 +60,9 @@ contract Remittance is Pausable {
     /**
      * An utility for the sender to generate the password correctly when creating a new transaction.
      */
-    function hashPasswords(string memory _password1, string memory _password2) public pure returns(bytes32) {
-        require(bytes(_password1).length != 0, "Password 1 not set");
-        require(bytes(_password2).length != 0, "Password 2 not set");
-        return keccak256(abi.encodePacked(_password1, _password2));
+    function hashPasswords(string memory _password) public view returns(bytes32) {
+        require(bytes(_password).length != 0, "Password 1 not set");
+        return keccak256(abi.encodePacked(address(this), _password));
     }
 
     /**
@@ -93,11 +92,11 @@ contract Remittance is Pausable {
     /**
      * Withdraw transaction
      */
-    function withdraw(uint _transactionId, string memory _password1, string memory _password2) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_transactionId) {
+    function withdraw(uint _transactionId, string memory _password) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_transactionId) {
         Transaction storage transaction = transactions[_transactionId];
         require(transaction.exchanger == msg.sender, "Only the exchanger can withdraw");
         require(transaction.amount > 0, "Nothing to withdraw");
-        bytes32 hash = keccak256(abi.encodePacked(_password1, _password2));
+        bytes32 hash = keccak256(abi.encodePacked(address(this), _password));
         require(transaction.hash == hash, "You did not provide the correct passwords");
         // We collect fee only when the transaction is real and completed
         uint netAmount = transaction.amount;

@@ -9,8 +9,7 @@ contract('Remittance', accounts => {
     const quantityBN = toBN(quantity);
     const quantityBig = toWei('1', 'ether');  // contract will take fees
     const quantityBigBN = toBN(quantityBig);
-    const password1 = "bananas"; // bananas for bob and cherries for carol
-    const password2 = "cherries";
+    const password = "bananas";
     let instance;
     let hash;
     let feeBN;
@@ -20,7 +19,7 @@ contract('Remittance', accounts => {
     beforeEach("deploy and prepare", async function() {
 
         instance = await Remittance.new(false, {from: owner});
-        hash = await instance.hashPasswords(password1, password2);
+        hash = await instance.hashPasswords(password);
         feeBN = await instance.fee.call();
         minimumAmountForApplyingFeeBN = await instance.minimumAmountForApplyingFee.call();
         maxExpirationDate = await instance.maxExpirationDays.call();
@@ -35,15 +34,20 @@ contract('Remittance', accounts => {
 
     describe("hashing passwords", function() {
 
-        it("should fail if passwords are empty", async function() {
+        it("should fail if password is empty", async function() {
 
             await expectedExceptionPromise(function() {
-                return instance.hashPasswords("", password2);
-            });
-            await expectedExceptionPromise(function() {
-                return instance.hashPasswords(password1, "");
+                return instance.hashPasswords("");
             });
         });
+
+        it("should do different hashes in different contracts", async function() {
+
+            let hash1 = await instance.hashPasswords(password);
+            let instance2 = await Remittance.new(false, {from: owner});
+            let hash2 = await instance2.hashPasswords(password);
+            assert.notStrictEqual(hash1, hash2, "Same hash in different contracts.");
+        })
     });
 
     describe("creating a new transaction", function() {
@@ -119,7 +123,7 @@ contract('Remittance', accounts => {
         it("should let carol withdraw the transaction", async function() {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let txObj = await instance.withdraw(transactionId, password1, password2, {from: carol});
+            let txObj = await instance.withdraw(transactionId, password, {from: carol});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
             assert.strictEqual(args['transactionId'].toString(), transactionId.toString(), "Log transaction id is not correct");
@@ -138,7 +142,7 @@ contract('Remittance', accounts => {
         it("should withdraw a transaction minus the fees", async function () {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let txObj = await instance.withdraw(transactionWithFeesId, password1, password2, {from: carol});
+            let txObj = await instance.withdraw(transactionWithFeesId, password, {from: carol});
             let args = txObj.logs[0].args;
             assert.strictEqual(args['amount'].toString(), quantityBigBN.sub(feeBN).toString(), "Log amount is not correct");
             assert.strictEqual(args['collectedFee'].toString(), feeBN.toString(), "Log fee is not correct");
@@ -155,33 +159,30 @@ contract('Remittance', accounts => {
 
         it("should not let carol withdraw twice", async function() {
 
-            await instance.withdraw(transactionId, password1, password2, {from: carol});
+            await instance.withdraw(transactionId, password, {from: carol});
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionId, password1, password2, {from: carol});
+                return await instance.withdraw(transactionId, password, {from: carol});
             });
         });
 
         it("should not let any other party to withdraw the transaction", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionId, password1, password2, {from: bob});
+                return await instance.withdraw(transactionId, password, {from: bob});
             });
         });
 
         it("should not let carol withdraw with a wrong password", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionId, "random", password2, {from: carol});
-            });
-            await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionId, password1, "random", {from: carol});
+                return await instance.withdraw(transactionId, "random", {from: carol});
             });
         });
 
         it("should not let withdraw past expiration time", async function() {
             await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionId, password1, password2, {from: carol});
+                return await instance.withdraw(transactionId, password, {from: carol});
             });
         });
     });
@@ -240,11 +241,11 @@ contract('Remittance', accounts => {
 
             let txObj = await instance.newTransaction(carol, hash, 5, {from: alice, value: quantityBig});
             let transactionId = txObj.logs[0].args['transactionId'];
-            await instance.withdraw(transactionId, password1, password2, {from: carol});
+            await instance.withdraw(transactionId, password, {from: carol});
 
             txObj = await instance.newTransaction(carol, hash, 5, {from: alice, value: quantityBig});
             transactionId = txObj.logs[0].args['transactionId'];
-            await instance.withdraw(transactionId, password1, password2, {from: carol});
+            await instance.withdraw(transactionId, password, {from: carol});
 
             feesQtyBN = feeBN.mul(toBN("2"));
         });
