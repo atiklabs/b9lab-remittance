@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/atik-lab/b9lab-remittance.svg?branch=develop)](https://travis-ci.org/atik-lab/b9lab-remittance)
+[![Build Status](https://travis-ci.org/atik-lab/b9lab-remittance.svg)](https://travis-ci.org/atik-lab/b9lab-remittance)
 
 # b9lab Remittance
 
