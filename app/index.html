@@ -35,8 +35,8 @@
         <div class="row">
             <div class="six columns">
                 <h2>Withdraw expired transaction</h2>
-                <label for="ExpiredTransactionPassword">Expired transaction hash:</label><input id="ExpiredTransactionPassword" type="text" value="" />
-                <button onclick="remittance.withdrawExpired()">Withdraw</button>
+                <label for="ExpiredTransactionHash">Expired transaction hash:</label><input id="ExpiredTransactionHash" type="text" value="" />
+                <button onclick="remittance.cancelRemittance()">Withdraw</button>
             </div>
             <div class="six columns">
                 <h2>Owner? Withdraw benefits</h2>
@@ -53,7 +53,6 @@
                 <tr>
                     <td>Id</td>
                     <td>Sender</td>
-                    <td>Exchanger</td>
                     <td>Amount</td>
                     <td>ExpirationTime</td>
                 </tr>

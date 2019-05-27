@@ -9,8 +9,10 @@ import "./Owned.sol";
 contract Pausable is Ownable {
     event Paused(address indexed account);
     event Unpaused(address indexed account);
+    event LogKilled(address indexed account);
 
     bool private _paused;
+    bool private _killSwitch = false;
 
     constructor (bool paused) internal {
         _paused = paused;
@@ -40,6 +42,14 @@ contract Pausable is Ownable {
     }
 
     /**
+     * @dev Modifier to make a function callable only when contract is alive.
+     */
+    modifier onlyAlive() {
+        require(_killSwitch == false, "The contract is dead");
+        _;
+    }
+
+    /**
      * @dev Called by a pauser to pause, triggers stopped state.
      */
     function pause() public onlyOwner whenNotPaused {
@@ -53,5 +63,13 @@ contract Pausable is Ownable {
     function unpause() public onlyOwner whenPaused {
         _paused = false;
         emit Unpaused(msg.sender);
+    }
+
+    /**
+     * @dev Turns the contract unusable if modifier used correctly in the contract.
+     */
+    function kill() public onlyOwner {
+        _killSwitch = true;
+        emit LogKilled(msg.sender);
     }
 }
