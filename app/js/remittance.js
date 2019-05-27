@@ -70,10 +70,9 @@ module.exports = {
     },
 
     withdraw: function() {
-        let transactionHash = document.getElementById("WithdrawTransactionHash").value;
         let password = document.getElementById("WithdrawPassword").value;
 
-        remittanceContract.methods.withdraw(transactionHash, password).send({from: defaultAccount})
+        remittanceContract.methods.withdraw(password).send({from: defaultAccount})
             .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
@@ -86,9 +85,9 @@ module.exports = {
     },
 
     withdrawExpired: function() {
-        let transactionHash = document.getElementById("ExpiredTransactionHash").value;
+        let password = document.getElementById("ExpiredTransactionPassword").value;
 
-        remittanceContract.methods.withdrawExpired(transactionHash).send({from: defaultAccount})
+        remittanceContract.methods.withdrawExpired(password).send({from: defaultAccount})
             .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {

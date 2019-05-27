@@ -132,7 +132,7 @@ contract('Remittance', accounts => {
         it("should let carol withdraw the transaction", async function() {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let txObj = await instance.withdraw(transactionHash, password, {from: carol});
+            let txObj = await instance.withdraw(password, {from: carol});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
             assert.strictEqual(args['hash'].toString(), transactionHash.toString(), "Log transaction id is not correct");
@@ -150,7 +150,7 @@ contract('Remittance', accounts => {
         it("should withdraw a transaction minus the fees", async function () {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let txObj = await instance.withdraw(transactionWithFeesHash, password2, {from: carol});
+            let txObj = await instance.withdraw(password2, {from: carol});
             let args = txObj.logs[0].args;
             assert.strictEqual(args['amount'].toString(), quantityBigBN.sub(feeBN).toString(), "Log amount is not correct");
 
@@ -166,30 +166,30 @@ contract('Remittance', accounts => {
 
         it("should not let carol withdraw twice", async function() {
 
-            await instance.withdraw(transactionHash, password, {from: carol});
+            await instance.withdraw(password, {from: carol});
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionHash, password, {from: carol});
+                return await instance.withdraw(password, {from: carol});
             });
         });
 
         it("should not let any other party to withdraw the transaction", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionHash, password, {from: bob});
+                return await instance.withdraw(password, {from: bob});
             });
         });
 
         it("should not let carol withdraw with a wrong password", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionHash, "random", {from: carol});
+                return await instance.withdraw("random", {from: carol});
             });
         });
 
         it("should not let withdraw past expiration time", async function() {
             await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw(transactionHash, password, {from: carol});
+                return await instance.withdraw(password, {from: carol});
             });
         });
     });
@@ -208,7 +208,7 @@ contract('Remittance', accounts => {
 
             let aliceInitialBalanceBN = toBN(await web3.eth.getBalance(alice));
             await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
-            let txObj = await instance.withdrawExpired(transactionHash, {from: alice});
+            let txObj = await instance.withdrawExpired(password, {from: alice});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
             assert.strictEqual(args['hash'].toString(), transactionHash.toString(), "Log transaction id is not correct");
@@ -226,7 +226,7 @@ contract('Remittance', accounts => {
         it("should not let withdraw to sender before expiration time", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdrawExpired(transactionHash, {from: alice});
+                return await instance.withdrawExpired(password, {from: alice});
             });
         });
 
@@ -234,7 +234,7 @@ contract('Remittance', accounts => {
 
             await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
             await expectedExceptionPromise(async function() {
-                return await instance.withdrawExpired(transactionHash, {from: bob});
+                return await instance.withdrawExpired(password, {from: bob});
             });
         });
 
@@ -246,13 +246,11 @@ contract('Remittance', accounts => {
 
         beforeEach("add fees", async function() {
 
-            let txObj = await instance.newTransaction(carol, hash, 5, {from: alice, value: quantityBig});
-            let transactionHash = txObj.logs[0].args['hash'];
-            await instance.withdraw(transactionHash, password, {from: carol});
+            await instance.newTransaction(carol, hash, 5, {from: alice, value: quantityBig});
+            await instance.withdraw(password, {from: carol});
 
-            txObj = await instance.newTransaction(carol, hash2, 5, {from: alice, value: quantityBig});
-            transactionHash = txObj.logs[0].args['hash'];
-            await instance.withdraw(transactionHash, password2, {from: carol});
+            await instance.newTransaction(carol, hash2, 5, {from: alice, value: quantityBig});
+            await instance.withdraw(password2, {from: carol});
 
             feesQtyBN = feeBN.mul(toBN("2"));
         });

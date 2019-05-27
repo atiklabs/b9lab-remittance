@@ -28,16 +28,6 @@ contract Remittance is Pausable {
     event LogWithdrawBenefits(uint indexed amount);
     event LogKilled();
 
-    modifier onlyBeforeExpirationTime(bytes32 _hash) {
-        require(now <= transactions[_hash].expirationTime, "Transaction has been expired");
-        _;
-    }
-
-    modifier onlyAfterExpirationTime(bytes32 _hash) {
-        require(now > transactions[_hash].expirationTime, "Transaction has not been expired yet");
-        _;
-    }
-
     modifier onlyAlive() {
         require(_killSwitch == false, "The contract is dead");
         _;
@@ -88,12 +78,12 @@ contract Remittance is Pausable {
     /**
      * Withdraw transaction
      */
-    function withdraw(bytes32 _hash, string memory _password) public whenNotPaused onlyAlive onlyBeforeExpirationTime(_hash) {
-        Transaction storage transaction = transactions[_hash];
-        require(transaction.exchanger == msg.sender, "Only the exchanger can withdraw");
+    function withdraw(string memory _password) public whenNotPaused onlyAlive {
+        bytes32 hash = hashPasswords(_password);
+        Transaction storage transaction = transactions[hash];
+        require(transaction.exchanger == msg.sender, "Only the exchanger can withdraw or incorrect password");
         require(transaction.amount > 0, "Nothing to withdraw");
-        bytes32 hash = keccak256(abi.encodePacked(address(this), _password));
-        require(hash == _hash, "You did not provide the correct passwords");
+        require(now <= transaction.expirationTime, "Transaction has been expired");
         // We collect fee only when the transaction is real and completed
         uint netAmount = transaction.amount;
         if (netAmount >= minimumAmountForApplyingFee) {
@@ -101,20 +91,22 @@ contract Remittance is Pausable {
             benefitsToWithdraw = benefitsToWithdraw + fee;
         }
         transaction.amount = 0;
-        emit LogWithdraw(_hash, transaction.sender, transaction.exchanger, netAmount);
+        emit LogWithdraw(hash, transaction.sender, transaction.exchanger, netAmount);
         msg.sender.transfer(netAmount);
     }
 
     /**
      * Withdraw expired transaction
      */
-    function withdrawExpired(bytes32 _hash) public whenNotPaused onlyAfterExpirationTime(_hash) onlyAlive {
-        Transaction storage transaction = transactions[_hash];
-        require(transaction.sender == msg.sender, "Only the exchanger can withdraw");
+    function withdrawExpired(string memory _password) public whenNotPaused onlyAlive {
+        bytes32 hash = hashPasswords(_password);
+        Transaction storage transaction = transactions[hash];
+        require(transaction.sender == msg.sender, "Only the exchanger can withdraw or incorrect password");
         require(transaction.amount > 0, "Nothing to withdraw");
+        require(now > transaction.expirationTime, "Transaction has not been expired yet");
         uint toWithdraw = transaction.amount;
         transaction.amount = 0;
-        emit LogWithdrawExpired(_hash, transaction.sender, transaction.exchanger, toWithdraw);
+        emit LogWithdrawExpired(hash, transaction.sender, transaction.exchanger, toWithdraw);
         msg.sender.transfer(toWithdraw);
     }
 
