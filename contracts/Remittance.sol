@@ -19,9 +19,9 @@ contract Remittance is Pausable {
     uint constant public minimumAmountForApplyingFee = 0.1 ether;
     uint public benefitsToWithdraw;
 
-    event LogSendRemittance(bytes32 indexed hash, address indexed sender, uint amount, uint expirationDate);
-    event LogWithdraw(bytes32 indexed hash, address indexed sender, uint amount);
-    event LogCancelRemittance(bytes32 indexed hash, address indexed sender, uint amount);
+    event LogSendRemittance(address indexed sender, uint amount, bytes32 indexed hash, uint expirationDate);
+    event LogWithdraw(address indexed sender, uint amount, bytes32 indexed hash);
+    event LogCancelRemittance(address indexed sender, uint amount, bytes32 indexed hash);
     event LogWithdrawBenefits(uint indexed amount);
 
     /**
@@ -61,7 +61,7 @@ contract Remittance is Pausable {
             amount: msg.value,
             expirationTime: expiration
         });
-        emit LogSendRemittance(_hash, msg.sender, msg.value, expiration);
+        emit LogSendRemittance(msg.sender, msg.value, _hash, expiration);
     }
 
     /**
@@ -78,7 +78,7 @@ contract Remittance is Pausable {
             netAmount = netAmount - fee;
             benefitsToWithdraw = benefitsToWithdraw + fee;
         }
-        emit LogWithdraw(hash, remittance.sender, netAmount);
+        emit LogWithdraw(remittance.sender, netAmount, hash);
         remittance.sender = address(0);  // For gas refund
         remittance.amount = 0;
         msg.sender.transfer(netAmount);
@@ -93,7 +93,7 @@ contract Remittance is Pausable {
         require(remittance.amount > 0, "Remittance already withdrawn or claimed");
         require(now > remittance.expirationTime, "Remittance has not been expired yet");
         uint toWithdraw = remittance.amount;
-        emit LogCancelRemittance(_hash, remittance.sender, toWithdraw);
+        emit LogCancelRemittance(remittance.sender, toWithdraw, _hash);
         remittance.sender = address(0);  // For gas refund
         remittance.amount = 0;
         msg.sender.transfer(toWithdraw);
