@@ -58,6 +58,7 @@ contract('Remittance', accounts => {
         it("should create a new remittance", async function() {
 
             let expirationDays = 5;
+            let aliceInitialBalanceBN = toBN(await web3.eth.getBalance(alice));
             let txObj = await instance.sendRemittance(hash, expirationDays, {from: alice, value: quantity});
 
             // Check event
@@ -67,6 +68,12 @@ contract('Remittance', accounts => {
             assert.strictEqual(args['sender'], alice, "Log sender is not correct");
             assert.strictEqual(args['amount'].toString(), quantity, "Log amount is not correct");
             assert.strictEqual(args['hash'], hash, "Log event hash is not correct");
+
+            // Check new alice balance
+            let remittanceCostBN = await getTransactionCost(txObj);
+            let aliceNewBalanceBN = toBN(await web3.eth.getBalance(alice));
+            let newBalanceCalculation = aliceInitialBalanceBN.sub(remittanceCostBN).sub(quantityBN);
+            assert.strictEqual(aliceNewBalanceBN.toString(), newBalanceCalculation.toString(), "Carol did not receive the right amount of funds");
 
             // Calculate expiration date
             let block = await web3.eth.getBlock('latest');
