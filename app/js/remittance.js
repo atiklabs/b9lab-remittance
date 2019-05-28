@@ -47,22 +47,22 @@ module.exports = {
         remittance.startWatcher();
     },
 
-    newTransaction: function() {
-        let exchanger = document.getElementById("NewTransactionExchanger").value;
-        let password = document.getElementById("NewTransactionPassword").value;
-        let expirationDays = document.getElementById("NewTransactionExpirationDays").value;
-        let amount = document.getElementById("NewTransactionAmount").value;
+    sendRemittance: function() {
+        let exchanger = document.getElementById("SendRemittanceExchanger").value;
+        let password = document.getElementById("SendRemittancePassword").value;
+        let expirationDays = document.getElementById("SendRemittanceExpirationDays").value;
+        let amount = document.getElementById("SendRemittanceAmount").value;
 
         remittanceContract.methods.hashPasswords(exchanger, password).call()
             .then(hash => {
                 messageSuccess("Passwords hash is " + hash);
-                remittanceContract.methods.newTransaction(hash, expirationDays).send({from: defaultAccount, value: web3.utils.toWei(amount, "ether")})
-                    .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
+                remittanceContract.methods.sendRemittance(hash, expirationDays).send({from: defaultAccount, value: web3.utils.toWei(amount, "ether")})
+                    .on('remittanceHash', (remittanceHash) => messageSuccess("Remittance " + remittanceHash))
                     .on('confirmation', (confirmationNumber, receipt) => {
                         if (receipt.status === true && receipt.logs.length === 1) {
-                            messageSuccess("Transaction successful");
+                            messageSuccess("Remittance successful");
                         } else {
-                            messageError("Transaction status: failed");
+                            messageError("Remittance status: failed");
                         }
                     })
                     .on('error', error => messageError(error));
@@ -73,27 +73,27 @@ module.exports = {
         let password = document.getElementById("WithdrawPassword").value;
 
         remittanceContract.methods.withdraw(password).send({from: defaultAccount})
-            .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
+            .on('remittanceHash', (remittanceHash) => messageSuccess("Remittance " + remittanceHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
-                    messageSuccess("Transaction successful");
+                    messageSuccess("Remittance successful");
                 } else {
-                    messageError("Transaction status: failed");
+                    messageError("Remittance status: failed");
                 }
             })
             .on('error', error => messageError(error));
     },
 
     cancelRemittance: function() {
-        let transactionHash = document.getElementById("ExpiredTransactionHash").value;
+        let remittanceHash = document.getElementById("ExpiredRemittanceHash").value;
 
-        remittanceContract.methods.cancelRemittance(transactionHash).send({from: defaultAccount})
-            .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
+        remittanceContract.methods.cancelRemittance(remittanceHash).send({from: defaultAccount})
+            .on('remittanceHash', (remittanceHash) => messageSuccess("Remittance " + remittanceHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
-                    messageSuccess("Transaction successful");
+                    messageSuccess("Remittance successful");
                 } else {
-                    messageError("Transaction status: failed");
+                    messageError("Remittance status: failed");
                 }
             })
             .on('error', error => messageError(error));
@@ -101,12 +101,12 @@ module.exports = {
 
     withdrawBenefits: function() {
         remittanceContract.methods.withdrawBenefits().send({from: defaultAccount})
-            .on('transactionHash', (transactionHash) => messageSuccess("Transaction " + transactionHash))
+            .on('remittanceHash', (remittanceHash) => messageSuccess("Remittance " + remittanceHash))
             .on('confirmation', (confirmationNumber, receipt) => {
                 if (receipt.status === true && receipt.logs.length === 1) {
-                    messageSuccess("Transaction successful");
+                    messageSuccess("Remittance successful");
                 } else {
-                    messageError("Transaction status: failed");
+                    messageError("Remittance status: failed");
                 }
             })
             .on('error', error => messageError(error));
@@ -135,21 +135,21 @@ module.exports = {
     // Update UI with the event
     parseEvent: function(event) {
         switch (event.event) {
-            case 'LogNewTransaction':
+            case 'LogSendRemittance':
                 let hash = event.returnValues['hash'];
                 let sender = event.returnValues['sender'];
                 let amount = web3.utils.toBN(event.returnValues['amount'].toString()); // BN !== BigNumber
                 let expirationDate = event.returnValues['expirationDate'];
-                remittance.addTransactionInTable(hash, sender, amount, expirationDate);
+                remittance.addRemittanceInTable(hash, sender, amount, expirationDate);
                 break;
             case 'LogWithdraw':
-                let transactionHash2 = event.returnValues['hash'];
-                remittance.setTransactionAmountToZero(transactionHash2);
+                let remittanceHash2 = event.returnValues['hash'];
+                remittance.setRemittanceAmountToZero(remittanceHash2);
                 remittance.updateAvailableBenefits(web3.utils.toBN(web3.utils.toWei("0.01")));
                 break;
             case 'LogCancelRemittance':
-                let transactionHash3 = event.returnValues['hash'];
-                remittance.setTransactionAmountToZero(transactionHash3);
+                let remittanceHash3 = event.returnValues['hash'];
+                remittance.setRemittanceAmountToZero(remittanceHash3);
                 break;
             case 'LogWithdrawBenefits':
                 let benefits = web3.utils.toBN(event.returnValues['amount'].toString()); // BN !== BigNumber
@@ -160,14 +160,14 @@ module.exports = {
         }
     },
 
-    addTransactionInTable: function(hash, sender, amount, expirationTime) {
+    addRemittanceInTable: function(hash, sender, amount, expirationTime) {
         let amountEther = web3.utils.fromWei(amount);
         let expirationTimeHuman = new Date(expirationTime*1000).toISOString();
-        document.getElementById("TransactionsTableBody").innerHTML += '<tr id="TransactionRow' + hash + '"><td>' + hash + '</td><td>' + sender + '</td><td id="TransactionsAmount' + hash + '">' + amountEther + '</td><td>' + expirationTimeHuman + '</tr>';
+        document.getElementById("RemittancesTableBody").innerHTML += '<tr id="RemittanceRow' + hash + '"><td>' + hash + '</td><td>' + sender + '</td><td id="RemittancesAmount' + hash + '">' + amountEther + '</td><td>' + expirationTimeHuman + '</tr>';
     },
 
-    setTransactionAmountToZero: function(hash) {
-        document.getElementById("TransactionsAmount" + hash).innerHTML = '0';
+    setRemittanceAmountToZero: function(hash) {
+        document.getElementById("RemittancesAmount" + hash).innerHTML = '0';
     },
 
     // Change contract balance UI

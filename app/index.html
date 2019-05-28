@@ -19,23 +19,23 @@
     <section id="Actions">
         <div class="row">
             <div class="six columns">
-                <h2>Add new transaction</h2>
-                <label for="NewTransactionExchanger">Exchanger:</label><input id="NewTransactionExchanger" type="text" value="0xd3fd7ad0b6dbde55df4f4d5135563f89ef8c79b2" />
-                <label for="NewTransactionPassword">Password:</label><input id="NewTransactionPassword" type="text" value="orange" />
-                <label for="NewTransactionExpirationDays">Expiration days:</label><input id="NewTransactionExpirationDays" type="number" value="10" />
-                <label for="NewTransactionAmount">Ether:</label><input id="NewTransactionAmount" type="text" value="1" />
-                <button onclick="remittance.newTransaction()">Send</button>
+                <h2>Send remittance</h2>
+                <label for="SendRemittanceExchanger">Exchanger:</label><input id="SendRemittanceExchanger" type="text" value="0xd3fd7ad0b6dbde55df4f4d5135563f89ef8c79b2" />
+                <label for="SendRemittancePassword">Password:</label><input id="SendRemittancePassword" type="text" value="orange" />
+                <label for="SendRemittanceExpirationDays">Expiration days:</label><input id="SendRemittanceExpirationDays" type="number" value="10" />
+                <label for="SendRemittanceAmount">Ether:</label><input id="SendRemittanceAmount" type="text" value="1" />
+                <button onclick="remittance.sendRemittance()">Send</button>
             </div>
             <div class="six columns">
-                <h2>Withdraw transaction</h2>
+                <h2>Withdraw remittance</h2>
                 <label for="WithdrawPassword">Password:</label><input id="WithdrawPassword" type="text" value="orange" />
                 <button onclick="remittance.withdraw()">Send</button>
             </div>
         </div>
         <div class="row">
             <div class="six columns">
-                <h2>Withdraw expired transaction</h2>
-                <label for="ExpiredTransactionHash">Expired transaction hash:</label><input id="ExpiredTransactionHash" type="text" value="" />
+                <h2>Withdraw expired remittance</h2>
+                <label for="ExpiredRemittanceHash">Expired remittance hash:</label><input id="ExpiredRemittanceHash" type="text" value="" />
                 <button onclick="remittance.cancelRemittance()">Withdraw</button>
             </div>
             <div class="six columns">
@@ -45,10 +45,10 @@
             </div>
         </div>
     </section>
-    <section id="Transactions">
-        <h2>Transactions</h2>
+    <section id="Remittances">
+        <h2>Remittances</h2>
         <div class="twelve columns">
-            <table id="TransactionsTable" class="u-full-width table-2-columns">
+            <table id="RemittancesTable" class="u-full-width table-2-columns">
                 <thead>
                 <tr>
                     <td>Id</td>
@@ -57,7 +57,7 @@
                     <td>ExpirationTime</td>
                 </tr>
                 </thead>
-                <tbody id="TransactionsTableBody">
+                <tbody id="RemittancesTableBody">
                 </tbody>
             </table>
         </div>

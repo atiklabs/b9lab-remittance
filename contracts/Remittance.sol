@@ -6,20 +6,20 @@ import "./SafeMath.sol";
 contract Remittance is Pausable {
     using SafeMath for uint;
 
-    struct Transaction {
+    struct Remittance {
         address sender;  // Keeping this to easy up the notification process to "Alice"
         uint amount;
         uint expirationTime;
     }
 
-    mapping(bytes32 => Transaction) public transactions;
+    mapping(bytes32 => Remittance) public remittances;
 
     uint constant public maxExpirationDays = 10;
     uint constant public fee = 0.01 ether;
     uint constant public minimumAmountForApplyingFee = 0.1 ether;
     uint public benefitsToWithdraw;
 
-    event LogNewTransaction(bytes32 indexed hash, address indexed sender, uint amount, uint expirationDate);
+    event LogSendRemittance(bytes32 indexed hash, address indexed sender, uint amount, uint expirationDate);
     event LogWithdraw(bytes32 indexed hash, address indexed sender, uint amount);
     event LogCancelRemittance(bytes32 indexed hash, address indexed sender, uint amount);
     event LogWithdrawBenefits(uint indexed amount);
@@ -33,11 +33,11 @@ contract Remittance is Pausable {
      * Avoid sending money directly to the contract
      */
     function() external payable {
-        revert("Use newTransaction() to send money.");
+        revert("Use sendRemittance() to send money.");
     }
 
     /**
-     * An utility for the sender to generate the password correctly when creating a new transaction.
+     * An utility for the sender to generate the password correctly when creating a new remittance.
      */
     function hashPasswords(address _exchanger, string memory _password) public view returns(bytes32) {
         require(bytes(_password).length != 0, "Password 1 not set");
@@ -45,57 +45,57 @@ contract Remittance is Pausable {
     }
 
     /**
-     * Alice sends ether to the contract with newTransaction(), which is unlocked with a cryptographic hash.
+     * Alice sends ether to the contract with sendRemittance(), which is unlocked with a cryptographic hash.
      * In order for a 3rd party to withdraw the money, that party will need to give the two keys that
      * generate the hash.
      */
-    function newTransaction(bytes32 _hash, uint _numberOfDays) external payable whenNotPaused {
+    function sendRemittance(bytes32 _hash, uint _numberOfDays) external payable whenNotPaused {
         require(_hash != bytes32(0), "Do not burn your eth");
-        require(msg.value > 0, "You must send something to create a new transaction");
-        require(_numberOfDays > 0, "You must set a number of days for the expiration of the transaction");
+        require(msg.value > 0, "You must send something to create a new remittance");
+        require(_numberOfDays > 0, "You must set a number of days for the expiration of the remittance");
         require(_numberOfDays <= maxExpirationDays, "Cannot set more than maxExpirationDays");
-        require(transactions[_hash].expirationTime == 0, "This hash has been already used in this contract");
+        require(remittances[_hash].expirationTime == 0, "This hash has been already used in this contract");
         uint expiration = now + _numberOfDays * 1 days;
-        transactions[_hash] = Transaction({
+        remittances[_hash] = Remittance({
             sender: msg.sender,
             amount: msg.value,
             expirationTime: expiration
         });
-        emit LogNewTransaction(_hash, msg.sender, msg.value, expiration);
+        emit LogSendRemittance(_hash, msg.sender, msg.value, expiration);
     }
 
     /**
-     * Withdraw transaction
+     * Withdraw remittance
      */
     function withdraw(string memory _password) public whenNotPaused {
         bytes32 hash = hashPasswords(msg.sender, _password);
-        Transaction storage transaction = transactions[hash];
-        require(transaction.amount > 0, "Remittance already withdrawn or claimed");
-        require(now <= transaction.expirationTime, "Transaction has been expired");
-        // We collect fee only when the transaction is real and completed
-        uint netAmount = transaction.amount;
+        Remittance storage remittance = remittances[hash];
+        require(remittance.amount > 0, "Remittance already withdrawn or claimed");
+        require(now <= remittance.expirationTime, "Remittance has been expired");
+        // We collect fee only when the remittance is real and completed
+        uint netAmount = remittance.amount;
         if (netAmount >= minimumAmountForApplyingFee) {
             netAmount = netAmount - fee;
             benefitsToWithdraw = benefitsToWithdraw + fee;
         }
-        emit LogWithdraw(hash, transaction.sender, netAmount);
-        transaction.sender = address(0);  // For gas refund
-        transaction.amount = 0;
+        emit LogWithdraw(hash, remittance.sender, netAmount);
+        remittance.sender = address(0);  // For gas refund
+        remittance.amount = 0;
         msg.sender.transfer(netAmount);
     }
 
     /**
-     * Withdraw expired transaction
+     * Withdraw expired remittance
      */
     function cancelRemittance(bytes32 _hash) public whenNotPaused {
-        Transaction storage transaction = transactions[_hash];
-        require(transaction.sender == msg.sender, "Only the sender can cancel a remittance");
-        require(transaction.amount > 0, "Remittance already withdrawn or claimed");
-        require(now > transaction.expirationTime, "Transaction has not been expired yet");
-        uint toWithdraw = transaction.amount;
-        emit LogCancelRemittance(_hash, transaction.sender, toWithdraw);
-        transaction.sender = address(0);  // For gas refund
-        transaction.amount = 0;
+        Remittance storage remittance = remittances[_hash];
+        require(remittance.sender == msg.sender, "Only the sender can cancel a remittance");
+        require(remittance.amount > 0, "Remittance already withdrawn or claimed");
+        require(now > remittance.expirationTime, "Remittance has not been expired yet");
+        uint toWithdraw = remittance.amount;
+        emit LogCancelRemittance(_hash, remittance.sender, toWithdraw);
+        remittance.sender = address(0);  // For gas refund
+        remittance.amount = 0;
         msg.sender.transfer(toWithdraw);
     }
 

@@ -53,17 +53,17 @@ contract('Remittance', accounts => {
         })
     });
 
-    describe("creating a new transaction", function() {
+    describe("creating a new remittance", function() {
 
-        it("should create a new transaction", async function() {
+        it("should create a new remittance", async function() {
 
             let expirationDays = 5;
-            let txObj = await instance.newTransaction(hash, expirationDays, {from: alice, value: quantity});
+            let txObj = await instance.sendRemittance(hash, expirationDays, {from: alice, value: quantity});
 
             // Check event
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
-            assert.strictEqual(args['hash'].toString(), hash.toString(), "Log transaction id is not correct");
+            assert.strictEqual(args['hash'].toString(), hash.toString(), "Log hash is not correct");
             assert.strictEqual(args['sender'], alice, "Log sender is not correct");
             assert.strictEqual(args['amount'].toString(), quantity, "Log amount is not correct");
             assert.strictEqual(args['hash'], hash, "Log event hash is not correct");
@@ -73,78 +73,78 @@ contract('Remittance', accounts => {
             let calculatedExpirationTime = block.timestamp + expirationDays*24*3600;
             assert.strictEqual(args['expirationDate'].toString(), calculatedExpirationTime.toString(), "Log expiration time is not correct");
 
-            // Check if the transaction worked as expected
+            // Check if the remittance worked as expected
             let newBalanceBN = toBN(await web3.eth.getBalance(instance.address));
             assert.strictEqual(quantityBN.toString(), newBalanceBN.toString(), "Contract does not have the ether we sent.");
-            let transaction = await instance.transactions.call(args['hash']);
-            assert.strictEqual(transaction['sender'], alice, "Transaction sender is not correct");
-            assert.strictEqual(transaction['amount'].toString(), quantity, "Transaction amount is not correct");
-            assert.strictEqual(transaction['expirationTime'].toString(), calculatedExpirationTime.toString(), "Transaction expiration time is not correct");
+            let remittance = await instance.remittances.call(args['hash']);
+            assert.strictEqual(remittance['sender'], alice, "Transaction sender is not correct");
+            assert.strictEqual(remittance['amount'].toString(), quantity, "Transaction amount is not correct");
+            assert.strictEqual(remittance['expirationTime'].toString(), calculatedExpirationTime.toString(), "Transaction expiration time is not correct");
         });
 
-        it("should create a new transaction with fees (nothing changes... until withdrawing)", async function() {
+        it("should create a new remittance with fees (nothing changes... until withdrawing)", async function() {
 
-            let txObj = await instance.newTransaction(hash, 5, {from: alice, value: quantityBig});
+            let txObj = await instance.sendRemittance(hash, 5, {from: alice, value: quantityBig});
 
             // Check event
             let args = txObj.logs[0].args;
             assert.strictEqual(args['amount'].toString(), quantityBigBN.toString(), "Log amount is not correct");
 
-            // Check if the transaction worked as expected
+            // Check if the remittance worked as expected
             let newBalanceBN = toBN(await web3.eth.getBalance(instance.address));
             assert.strictEqual(quantityBigBN.toString(), newBalanceBN.toString(), "Contract does not have the ether we sent.");
-            let transaction = await instance.transactions.call(args['hash']);
-            assert.strictEqual(transaction['amount'].toString(), quantityBigBN.toString(), "Log amount is not correct");
+            let remittance = await instance.remittances.call(args['hash']);
+            assert.strictEqual(remittance['amount'].toString(), quantityBigBN.toString(), "Log amount is not correct");
         });
 
         it("should not let with wrong expiration date", async function() {
             await expectedExceptionPromise(async function() {
-                return await instance.newTransaction(hash, 0, {from: alice, value: quantity});
+                return await instance.sendRemittance(hash, 0, {from: alice, value: quantity});
             });
             await expectedExceptionPromise(async function() {
-                return await instance.newTransaction(hash, maxExpirationDate + 1, {from: alice, value: quantity});
+                return await instance.sendRemittance(hash, maxExpirationDate + 1, {from: alice, value: quantity});
             });
         });
 
         it("should not let use the same password twice", async function() {
-            await instance.newTransaction(hash, 5, {from: alice, value: quantity});
+            await instance.sendRemittance(hash, 5, {from: alice, value: quantity});
             await expectedExceptionPromise(async function() {
-                return await instance.newTransaction(hash, 5, {from: bob, value: quantityBig});
+                return await instance.sendRemittance(hash, 5, {from: bob, value: quantityBig});
             });
         });
     });
 
-    describe("withdrawing transaction", function() {
+    describe("withdrawing remittance", function() {
 
-        let transactionHash = null;
-        let transactionWithFeesHash = null;
+        let remittanceHash = null;
+        let remittanceWithFeesHash = null;
 
-        beforeEach("add transactions", async function() {
+        beforeEach("add remittances", async function() {
 
-            let txObj = await instance.newTransaction(hash, 5, {from: alice, value: quantity});
-            transactionHash = txObj.logs[0].args['hash'];
-            txObj = await instance.newTransaction(hash2, 5, {from: alice, value: quantityBig});
-            transactionWithFeesHash = txObj.logs[0].args['hash'];
+            let txObj = await instance.sendRemittance(hash, 5, {from: alice, value: quantity});
+            remittanceHash = txObj.logs[0].args['hash'];
+            txObj = await instance.sendRemittance(hash2, 5, {from: alice, value: quantityBig});
+            remittanceWithFeesHash = txObj.logs[0].args['hash'];
         });
 
-        it("should let carol withdraw the transaction", async function() {
+        it("should let carol withdraw the remittance", async function() {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
             let txObj = await instance.withdraw(password, {from: carol});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
-            assert.strictEqual(args['hash'].toString(), transactionHash.toString(), "Log transaction id is not correct");
+            assert.strictEqual(args['hash'].toString(), remittanceHash.toString(), "Log remittance id is not correct");
             assert.strictEqual(args['sender'], alice, "Log sender is not correct");
             assert.strictEqual(args['amount'].toString(), quantity, "Log amount is not correct");
 
             // Check new carol balance
-            let transactionCostBN = await getTransactionCost(txObj);
+            let remittanceCostBN = await getTransactionCost(txObj);
             let carolNewBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let newBalanceCalculation = carolInitialBalanceBN.sub(transactionCostBN).add(quantityBN);
+            let newBalanceCalculation = carolInitialBalanceBN.sub(remittanceCostBN).add(quantityBN);
             assert.strictEqual(carolNewBalanceBN.toString(), newBalanceCalculation.toString(), "Carol did not receive the right amount of funds");
         });
 
-        it("should withdraw a transaction minus the fees", async function () {
+        it("should withdraw a remittance minus the fees", async function () {
 
             let carolInitialBalanceBN = toBN(await web3.eth.getBalance(carol));
             let txObj = await instance.withdraw(password2, {from: carol});
@@ -152,9 +152,9 @@ contract('Remittance', accounts => {
             assert.strictEqual(args['amount'].toString(), quantityBigBN.sub(feeBN).toString(), "Log amount is not correct");
 
             // Check new carol balance
-            let transactionCostBN = await getTransactionCost(txObj);
+            let remittanceCostBN = await getTransactionCost(txObj);
             let carolNewBalanceBN = toBN(await web3.eth.getBalance(carol));
-            let newBalanceCalculation = carolInitialBalanceBN.sub(transactionCostBN).add(quantityBigBN).sub(feeBN);
+            let newBalanceCalculation = carolInitialBalanceBN.sub(remittanceCostBN).add(quantityBigBN).sub(feeBN);
             assert.strictEqual(carolNewBalanceBN.toString(), newBalanceCalculation.toString(), "Carol did not receive the right amount of funds");
 
             let benefitsToWithdraw = await instance.benefitsToWithdraw.call();
@@ -169,7 +169,7 @@ contract('Remittance', accounts => {
             });
         });
 
-        it("should not let any other party to withdraw the transaction", async function() {
+        it("should not let any other party to withdraw the remittance", async function() {
 
             await expectedExceptionPromise(async function() {
                 return await instance.withdraw(password, {from: bob});
@@ -193,12 +193,12 @@ contract('Remittance', accounts => {
 
     describe("withdrawing after expiration date", function() {
 
-        let transactionHash = null;
+        let remittanceHash = null;
 
-        beforeEach("add transactions", async function() {
+        beforeEach("add remittances", async function() {
 
-            let txObj = await instance.newTransaction(hash, 5, {from: alice, value: quantity});
-            transactionHash = txObj.logs[0].args['hash'];
+            let txObj = await instance.sendRemittance(hash, 5, {from: alice, value: quantity});
+            remittanceHash = txObj.logs[0].args['hash'];
         });
 
         it("should let withdraw to sender after expiration time", async function() {
@@ -208,14 +208,14 @@ contract('Remittance', accounts => {
             let txObj = await instance.cancelRemittance(hash, {from: alice});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
-            assert.strictEqual(args['hash'].toString(), transactionHash.toString(), "Log transaction id is not correct");
+            assert.strictEqual(args['hash'].toString(), remittanceHash.toString(), "Log remittance id is not correct");
             assert.strictEqual(args['sender'], alice, "Log sender is not correct");
             assert.strictEqual(args['amount'].toString(), quantity, "Log amount is not correct");
 
             // Check new alice balance
-            let transactionCostBN = await getTransactionCost(txObj);
+            let remittanceCostBN = await getTransactionCost(txObj);
             let aliceNewBalanceBN = toBN(await web3.eth.getBalance(alice));
-            let newBalanceCalculation = aliceInitialBalanceBN.sub(transactionCostBN).add(quantityBN);
+            let newBalanceCalculation = aliceInitialBalanceBN.sub(remittanceCostBN).add(quantityBN);
             assert.strictEqual(aliceNewBalanceBN.toString(), newBalanceCalculation.toString(), "Carol did not receive the right amount of funds");
         });
 
@@ -242,10 +242,10 @@ contract('Remittance', accounts => {
 
         beforeEach("add fees", async function() {
 
-            await instance.newTransaction(hash, 5, {from: alice, value: quantityBig});
+            await instance.sendRemittance(hash, 5, {from: alice, value: quantityBig});
             await instance.withdraw(password, {from: carol});
 
-            await instance.newTransaction(hash2, 5, {from: alice, value: quantityBig});
+            await instance.sendRemittance(hash2, 5, {from: alice, value: quantityBig});
             await instance.withdraw(password2, {from: carol});
 
             feesQtyBN = feeBN.mul(toBN("2"));
@@ -259,9 +259,9 @@ contract('Remittance', accounts => {
             assert.strictEqual(txObj.logs[0].args['amount'].toString(), feesQtyBN.toString(), "Log amount is not correct");
 
             // Check new owner balance
-            let transactionCostBN = await getTransactionCost(txObj);
+            let remittanceCostBN = await getTransactionCost(txObj);
             let ownerNewBalanceBN = toBN(await web3.eth.getBalance(owner));
-            let newBalanceCalculation = ownerInitialBalance.sub(transactionCostBN).add(feesQtyBN);
+            let newBalanceCalculation = ownerInitialBalance.sub(remittanceCostBN).add(feesQtyBN);
             assert.strictEqual(ownerNewBalanceBN.toString(), newBalanceCalculation.toString(), "Owner did not receive the right amount");
         });
 
@@ -295,7 +295,7 @@ contract('Remittance', accounts => {
             let txObj = await instance.kill({from: owner});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             await expectedExceptionPromise(function() {
-                return instance.newTransaction(hash, 5, {from: alice, value: quantity});
+                return instance.sendRemittance(hash, 5, {from: alice, value: quantity});
             });
         });
 
@@ -314,7 +314,7 @@ contract('Remittance', accounts => {
             let isPaused = await instance.isPaused();
             assert.strictEqual(isPaused, true, "Contract should be paused");
             await expectedExceptionPromise(function() {
-                return instance.newTransaction(hash, 5, {from: alice, value: quantity});
+                return instance.sendRemittance(hash, 5, {from: alice, value: quantity});
             });
             isPaused = await instance.isPaused();
             assert.strictEqual(isPaused, true, "Contract should not be paused");
@@ -324,7 +324,7 @@ contract('Remittance', accounts => {
 
             let instance2 = await Remittance.new(true, {from: owner});
             await expectedExceptionPromise(function() {
-                return instance2.newTransaction(hash, 5, {from: alice, value: quantity});
+                return instance2.sendRemittance(hash, 5, {from: alice, value: quantity});
             });
         });
     });
