@@ -60,7 +60,7 @@ contract Pausable is Ownable {
     /**
      * @dev Called by a pauser to unpause, returns to normal state.
      */
-    function unpause() public onlyOwner whenPaused {
+    function unpause() public onlyOwner whenPaused onlyAlive {
         _paused = false;
         emit Unpaused(msg.sender);
     }
@@ -70,6 +70,7 @@ contract Pausable is Ownable {
      */
     function kill() public onlyOwner {
         _killSwitch = true;
+        _paused = true;
         emit LogKilled(msg.sender);
     }
 }

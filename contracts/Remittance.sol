@@ -49,7 +49,7 @@ contract Remittance is Pausable {
      * In order for a 3rd party to withdraw the money, that party will need to give the two keys that
      * generate the hash.
      */
-    function newTransaction(bytes32 _hash, uint _numberOfDays) external payable whenNotPaused onlyAlive {
+    function newTransaction(bytes32 _hash, uint _numberOfDays) external payable whenNotPaused {
         require(_hash != bytes32(0), "Do not burn your eth");
         require(msg.value > 0, "You must send something to create a new transaction");
         require(_numberOfDays > 0, "You must set a number of days for the expiration of the transaction");
@@ -67,7 +67,7 @@ contract Remittance is Pausable {
     /**
      * Withdraw transaction
      */
-    function withdraw(string memory _password) public whenNotPaused onlyAlive {
+    function withdraw(string memory _password) public whenNotPaused {
         bytes32 hash = hashPasswords(msg.sender, _password);
         Transaction storage transaction = transactions[hash];
         require(transaction.amount > 0, "Remittance already withdrawn or claimed");
@@ -87,7 +87,7 @@ contract Remittance is Pausable {
     /**
      * Withdraw expired transaction
      */
-    function cancelRemittance(bytes32 _hash) public whenNotPaused onlyAlive {
+    function cancelRemittance(bytes32 _hash) public whenNotPaused {
         Transaction storage transaction = transactions[_hash];
         require(transaction.sender == msg.sender, "Only the sender can cancel a remittance");
         require(transaction.amount > 0, "Remittance already withdrawn or claimed");
@@ -102,7 +102,7 @@ contract Remittance is Pausable {
     /**
      * Withdrawing benefits produced by the contract.
      */
-    function withdrawBenefits() public onlyOwner onlyAlive {
+    function withdrawBenefits() public onlyOwner whenNotPaused {
         uint benefits = benefitsToWithdraw;
         require(benefits > 0, "There are no fees to withdraw");
         emit LogWithdrawBenefits(benefits);
