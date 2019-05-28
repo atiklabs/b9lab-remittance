@@ -6,13 +6,13 @@ import "./SafeMath.sol";
 contract Remittance is Pausable {
     using SafeMath for uint;
 
-    struct Remittance {
+    struct RemittanceObj {
         address sender;  // Keeping this to easy up the notification process to "Alice"
         uint amount;
         uint expirationTime;
     }
 
-    mapping(bytes32 => Remittance) public remittances;
+    mapping(bytes32 => RemittanceObj) public remittances;
 
     uint constant public maxExpirationDays = 10;
     uint constant public fee = 0.01 ether;
@@ -56,7 +56,7 @@ contract Remittance is Pausable {
         require(_numberOfDays <= maxExpirationDays, "Cannot set more than maxExpirationDays");
         require(remittances[_hash].expirationTime == 0, "This hash has been already used in this contract");
         uint expiration = now + _numberOfDays * 1 days;
-        remittances[_hash] = Remittance({
+        remittances[_hash] = RemittanceObj({
             sender: msg.sender,
             amount: msg.value,
             expirationTime: expiration
@@ -69,7 +69,7 @@ contract Remittance is Pausable {
      */
     function withdraw(string memory _password) public whenNotPaused {
         bytes32 hash = hashPasswords(msg.sender, _password);
-        Remittance storage remittance = remittances[hash];
+        RemittanceObj storage remittance = remittances[hash];
         require(remittance.amount > 0, "Remittance already withdrawn or claimed");
         require(now <= remittance.expirationTime, "Remittance has been expired");
         // We collect fee only when the remittance is real and completed
@@ -88,7 +88,7 @@ contract Remittance is Pausable {
      * Withdraw expired remittance
      */
     function cancelRemittance(bytes32 _hash) public whenNotPaused {
-        Remittance storage remittance = remittances[_hash];
+        RemittanceObj storage remittance = remittances[_hash];
         require(remittance.sender == msg.sender, "Only the sender can cancel a remittance");
         require(remittance.amount > 0, "Remittance already withdrawn or claimed");
         require(now > remittance.expirationTime, "Remittance has not been expired yet");
