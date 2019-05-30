@@ -40,7 +40,8 @@ contract Remittance is Pausable {
      * An utility for the sender to generate the password correctly when creating a new remittance.
      */
     function hashPasswords(address _exchanger, string memory _password) public view returns(bytes32) {
-        require(bytes(_password).length != 0, "Password 1 not set");
+        require(_exchanger != address(0), "Not a valid exchanger address");
+        require(bytes(_password).length != 0, "Password not set");
         return keccak256(abi.encodePacked(address(this), _exchanger, _password));
     }
 

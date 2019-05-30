@@ -19,6 +19,13 @@ contract('Remittance', accounts => {
     let minimumAmountForApplyingFeeBN;
     let maxExpirationSeconds;
 
+    before("running check if the setup is correct to pass the tests", async function() {
+
+        let aliceBalanceBN = toBN(await web3.eth.getBalance(alice));
+        let minimum = toBN(toWei('1', 'ether'));
+        assert.isTrue(aliceBalanceBN.gte(minimum));
+    });
+
     beforeEach("deploy and prepare", async function() {
 
         instance = await Remittance.new(false, {from: owner});
@@ -27,13 +34,6 @@ contract('Remittance', accounts => {
         feeBN = await instance.fee.call();
         minimumAmountForApplyingFeeBN = await instance.minimumAmountForApplyingFee.call();
         maxExpirationSeconds = await instance.maxExpirationSeconds.call();
-    });
-
-    before("running check if the setup is correct to pass the tests", async function() {
-
-        let aliceBalanceBN = toBN(await web3.eth.getBalance(alice));
-        let minimum = toBN(toWei('1', 'ether'));
-        assert.isTrue(aliceBalanceBN.gte(minimum));
     });
 
     describe("hashing passwords", function() {
