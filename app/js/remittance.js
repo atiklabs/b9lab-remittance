@@ -50,7 +50,7 @@ module.exports = {
 
     sendRemittance: function() {
         let exchanger = document.getElementById("SendRemittanceExchanger").value;
-        let password = document.getElementById("SendRemittancePassword").value;
+        let password = web3.utils.fromAscii(document.getElementById("SendRemittancePassword").value);
         let expirationDays = secondsInDay*document.getElementById("SendRemittanceExpirationDays").value;
         let amount = document.getElementById("SendRemittanceAmount").value;
 
@@ -71,7 +71,7 @@ module.exports = {
     },
 
     withdraw: function() {
-        let password = document.getElementById("WithdrawPassword").value;
+        let password = web3.utils.fromAscii(document.getElementById("WithdrawPassword").value);
 
         remittanceContract.methods.withdraw(password).send({from: defaultAccount})
             .on('remittanceHash', (remittanceHash) => messageSuccess("Remittance " + remittanceHash))

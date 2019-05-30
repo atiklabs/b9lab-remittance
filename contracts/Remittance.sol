@@ -39,9 +39,9 @@ contract Remittance is Pausable {
     /**
      * An utility for the sender to generate the password correctly when creating a new remittance.
      */
-    function hashPasswords(address _exchanger, string memory _password) public view returns(bytes32) {
+    function hashPasswords(address _exchanger, bytes32 _password) public view returns(bytes32) {
         require(_exchanger != address(0), "Not a valid exchanger address");
-        require(bytes(_password).length != 0, "Password not set");
+        require(_password != bytes32(0), "Password not set");
         return keccak256(abi.encodePacked(address(this), _exchanger, _password));
     }
 
@@ -68,7 +68,7 @@ contract Remittance is Pausable {
     /**
      * Withdraw remittance
      */
-    function withdraw(string memory _password) public whenNotPaused {
+    function withdraw(bytes32 _password) public whenNotPaused {
         bytes32 hash = hashPasswords(msg.sender, _password);
         RemittanceObj storage remittance = remittances[hash];
         require(remittance.amount > 0, "Remittance already withdrawn or claimed");

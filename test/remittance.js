@@ -1,7 +1,7 @@
 const Remittance = artifacts.require("Remittance.sol");
 const expectedExceptionPromise = require("../util/expected-exception-promise.js");
 const getTransactionCost = require("../util/get-transaction-cost.js");
-const { toWei, toBN } = web3.utils;
+const { toWei, toBN, fromAscii } = web3.utils;
 
 contract('Remittance', accounts => {
     const [ owner, alice, bob, carol ] = accounts;
@@ -9,8 +9,8 @@ contract('Remittance', accounts => {
     const quantityBN = toBN(quantity);
     const quantityBig = toWei('1', 'ether');  // contract will take fees
     const quantityBigBN = toBN(quantityBig);
-    const password = "bananas";
-    const password2 = "cherries";
+    const password = fromAscii("bananas");
+    const password2 = fromAscii("cherries");
     const secondsInDay = 86400;
     let instance;
     let hash;
@@ -41,7 +41,7 @@ contract('Remittance', accounts => {
         it("should fail if password is empty", async function() {
 
             await expectedExceptionPromise(function() {
-                return instance.hashPasswords(carol, "");
+                return instance.hashPasswords(carol, fromAscii(""));
             });
         });
 
@@ -50,7 +50,7 @@ contract('Remittance', accounts => {
             let hash1 = await instance.hashPasswords(carol, password);
             let instance2 = await Remittance.new(false, {from: owner});
             let hash2 = await instance2.hashPasswords(carol, password);
-            assert.notStrictEqual(hash1, hash2, "Same hash in different contracts.");
+            assert.notEqual(hash1, hash2, "Same hash in different contracts.");
         })
     });
 
@@ -182,7 +182,7 @@ contract('Remittance', accounts => {
         it("should not let carol withdraw with a wrong password", async function() {
 
             await expectedExceptionPromise(async function() {
-                return await instance.withdraw("random", {from: carol});
+                return await instance.withdraw(fromAscii("random"), {from: carol});
             });
         });
 
@@ -283,7 +283,7 @@ contract('Remittance', accounts => {
         it("should not let withdraw the fees while remittance in flight", async function() {
 
             await instance.withdrawBenefits({from: owner});
-            let hash3 = await instance.hashPasswords(carol, "another password");
+            let hash3 = await instance.hashPasswords(carol, fromAscii("another password"));
             await instance.sendRemittance(hash3, 5, {from: alice, value: quantityBig});
             await expectedExceptionPromise(async function() {
                 return await instance.withdrawBenefits({from: owner});
