@@ -5,6 +5,7 @@ require("file-loader?name=../css/style.css!../css/style.css");
 
 const Web3 = require("web3");
 const remittanceJson = require("../../build/contracts/Remittance.json");
+const secondsInDay = 86400;
 
 let remittanceContract;
 let web3, accounts, defaultAccount;
@@ -50,7 +51,7 @@ module.exports = {
     sendRemittance: function() {
         let exchanger = document.getElementById("SendRemittanceExchanger").value;
         let password = document.getElementById("SendRemittancePassword").value;
-        let expirationDays = document.getElementById("SendRemittanceExpirationDays").value;
+        let expirationDays = secondsInDay*document.getElementById("SendRemittanceExpirationDays").value;
         let amount = document.getElementById("SendRemittanceAmount").value;
 
         remittanceContract.methods.hashPasswords(exchanger, password).call()

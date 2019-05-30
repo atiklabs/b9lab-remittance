@@ -11,12 +11,13 @@ contract('Remittance', accounts => {
     const quantityBigBN = toBN(quantityBig);
     const password = "bananas";
     const password2 = "cherries";
+    const secondsInDay = 86400;
     let instance;
     let hash;
     let hash2;
     let feeBN;
     let minimumAmountForApplyingFeeBN;
-    let maxExpirationDate;
+    let maxExpirationSeconds;
 
     beforeEach("deploy and prepare", async function() {
 
@@ -25,7 +26,7 @@ contract('Remittance', accounts => {
         hash2 = await instance.hashPasswords(carol, password2);
         feeBN = await instance.fee.call();
         minimumAmountForApplyingFeeBN = await instance.minimumAmountForApplyingFee.call();
-        maxExpirationDate = await instance.maxExpirationDays.call();
+        maxExpirationSeconds = await instance.maxExpirationSeconds.call();
     });
 
     before("running check if the setup is correct to pass the tests", async function() {
@@ -57,14 +58,13 @@ contract('Remittance', accounts => {
 
         it("should create a new remittance", async function() {
 
-            let expirationDays = 5;
+            let expirationSeconds = secondsInDay*2;
             let aliceInitialBalanceBN = toBN(await web3.eth.getBalance(alice));
-            let txObj = await instance.sendRemittance(hash, expirationDays, {from: alice, value: quantity});
+            let txObj = await instance.sendRemittance(hash, expirationSeconds, {from: alice, value: quantity});
 
             // Check event
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;
-            assert.strictEqual(args['hash'].toString(), hash.toString(), "Log hash is not correct");
             assert.strictEqual(args['sender'], alice, "Log sender is not correct");
             assert.strictEqual(args['amount'].toString(), quantity, "Log amount is not correct");
             assert.strictEqual(args['hash'], hash, "Log event hash is not correct");
@@ -77,7 +77,7 @@ contract('Remittance', accounts => {
 
             // Calculate expiration date
             let block = await web3.eth.getBlock('latest');
-            let calculatedExpirationTime = block.timestamp + expirationDays*24*3600;
+            let calculatedExpirationTime = block.timestamp + expirationSeconds;
             assert.strictEqual(args['expirationDate'].toString(), calculatedExpirationTime.toString(), "Log expiration time is not correct");
 
             // Check if the remittance worked as expected
@@ -109,7 +109,7 @@ contract('Remittance', accounts => {
                 return await instance.sendRemittance(hash, 0, {from: alice, value: quantity});
             });
             await expectedExceptionPromise(async function() {
-                return await instance.sendRemittance(hash, maxExpirationDate + 1, {from: alice, value: quantity});
+                return await instance.sendRemittance(hash, maxExpirationSeconds + 1, {from: alice, value: quantity});
             });
         });
 
@@ -191,7 +191,7 @@ contract('Remittance', accounts => {
         });
 
         it("should not let withdraw past expiration time", async function() {
-            await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
+            await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [24*3600 + 1], id: 0}, err => console.log);
             await expectedExceptionPromise(async function() {
                 return await instance.withdraw(password, {from: carol});
             });
@@ -211,7 +211,7 @@ contract('Remittance', accounts => {
         it("should let withdraw to sender after expiration time", async function() {
 
             let aliceInitialBalanceBN = toBN(await web3.eth.getBalance(alice));
-            await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [6*24*3600], id: 0}, err => console.log);
+            await web3.currentProvider.send({jsonrpc: '2.0', method: 'evm_increaseTime', params: [2*3600*24], id: 0}, err => console.log);
             let txObj = await instance.cancelRemittance(hash, {from: alice});
             assert.strictEqual(txObj.logs.length, 1, "Only one event is expected");
             let args = txObj.logs[0].args;

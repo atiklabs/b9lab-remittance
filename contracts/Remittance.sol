@@ -14,7 +14,7 @@ contract Remittance is Pausable {
 
     mapping(bytes32 => RemittanceObj) public remittances;
 
-    uint constant public maxExpirationDays = 10;
+    uint constant public maxExpirationSeconds = 10 * 1 days;
     uint constant public fee = 0.01 ether;
     uint constant public minimumAmountForApplyingFee = 0.1 ether;
     uint public benefitsToWithdraw;
@@ -49,13 +49,13 @@ contract Remittance is Pausable {
      * In order for a 3rd party to withdraw the money, that party will need to give the two keys that
      * generate the hash.
      */
-    function sendRemittance(bytes32 _hash, uint _numberOfDays) external payable whenNotPaused {
+    function sendRemittance(bytes32 _hash, uint _seconds) external payable whenNotPaused {
         require(_hash != bytes32(0), "Do not burn your eth");
         require(msg.value > 0, "You must send something to create a new remittance");
-        require(_numberOfDays > 0, "You must set a number of days for the expiration of the remittance");
-        require(_numberOfDays <= maxExpirationDays, "Cannot set more than maxExpirationDays");
+        require(_seconds > 0, "You must set a number of days for the expiration of the remittance");
+        require(_seconds <= maxExpirationSeconds, "Cannot set more than maxExpirationDays");
         require(remittances[_hash].expirationTime == 0, "This hash has been already used in this contract");
-        uint expiration = now + _numberOfDays * 1 days;
+        uint expiration = now + _seconds;
         remittances[_hash] = RemittanceObj({
             sender: msg.sender,
             amount: msg.value,
