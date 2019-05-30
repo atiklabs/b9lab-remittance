@@ -286,6 +286,16 @@ contract('Remittance', accounts => {
                 return await instance.withdrawBenefits({from: owner});
             });
         });
+
+        it("should not let withdraw the fees while remittance in flight", async function() {
+
+            await instance.withdrawBenefits({from: owner});
+            let hash3 = await instance.hashPasswords(carol, "another password");
+            await instance.sendRemittance(hash3, 5, {from: alice, value: quantityBig});
+            await expectedExceptionPromise(async function() {
+                return await instance.withdrawBenefits({from: owner});
+            });
+        });
     });
 
     describe("exceptions when not able to send ETH", function() {
