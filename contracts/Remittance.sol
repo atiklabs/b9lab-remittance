@@ -56,7 +56,7 @@ contract Remittance is Pausable {
         require(_seconds > 0, "You must set a number of days for the expiration of the remittance");
         require(_seconds <= maxExpirationSeconds, "Cannot set more than maxExpirationDays");
         require(remittances[_hash].expirationTime == 0, "This hash has been already used in this contract");
-        uint expiration = now + _seconds;
+        uint expiration = now.add(_seconds);
         remittances[_hash] = RemittanceObj({
             sender: msg.sender,
             amount: msg.value,
@@ -76,8 +76,8 @@ contract Remittance is Pausable {
         // We collect fee only when the remittance is real and completed
         uint netAmount = remittance.amount;
         if (netAmount >= minimumAmountForApplyingFee) {
-            netAmount = netAmount - fee;
-            benefitsToWithdraw = benefitsToWithdraw + fee;
+            netAmount = netAmount.sub(fee);
+            benefitsToWithdraw = benefitsToWithdraw.add(fee);
         }
         emit LogWithdraw(remittance.sender, netAmount, hash);
         remittance.sender = address(0);  // For gas refund
